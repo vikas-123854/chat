@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Chat</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      margin-top: 50px;
+    }
+    .chat-box {
+      width: 300px;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .messages {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    .input-box {
+      display: flex;
+    }
+    input {
+      flex: 1;
+      padding: 5px;
+    }
+    button {
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="chat-box">
+  <div class="messages" id="messages"></div>
+
+  <div class="input-box">
+    <input type="text" id="msgInput" placeholder="Type message..." onkeypress="handleKey(event)">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<!-- ✅ Firebase scripts (SABSE PEHLE LOAD HONE CHAHIYE) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  // ✅ Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBSzLon0FN7Yh36hxZNMPWKIvnnWF7JQ5M",
+    authDomain: "chat-app-7447f.firebaseapp.com",
+    databaseURL: "https://chat-app-7447f-default-rtdb.firebaseio.com",
+    projectId: "chat-app-7447f",
+    storageBucket: "chat-app-7447f.appspot.com",
+    messagingSenderId: "649241787917",
+    appId: "1:649241787917:web:87bdba762ff4290f581f44"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ✅ Send message
+  function sendMessage() {
+    let input = document.getElementById("msgInput");
+    let message = input.value;
+
+    if (message.trim() === "") return;
+
+    db.ref("messages").push({
+      text: message
+    });
+
+    input.value = "";
+  }
+
+  // ✅ Enter key
+  function handleKey(event) {
+    if (event.key === "Enter") {
+      sendMessage();
+    }
+  }
+
+  // ✅ Real-time listener
+  db.ref("messages").on("child_added", function(snapshot) {
+    let msg = snapshot.val().text;
+
+    let msgDiv = document.createElement("div");
+    msgDiv.textContent = msg;
+
+    msgDiv.style.background = "#dcf8c6";
+    msgDiv.style.padding = "5px";
+    msgDiv.style.margin = "5px";
+    msgDiv.style.borderRadius = "5px";
+    msgDiv.style.textAlign = "right";
+
+    document.getElementById("messages").appendChild(msgDiv);
+
+    // auto scroll
+    let messages = document.getElementById("messages");
+    messages.scrollTop = messages.scrollHeight;
+  });
+</script>
+
+</body>
+</html>
