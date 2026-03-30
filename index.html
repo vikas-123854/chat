@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat App</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #ece5dd;
+      display: flex;
+      justify-content: center;
+      margin-top: 50px;
+    }
+
+    .chat-box {
+      width: 320px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    .messages {
+      height: 350px;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      background: #efeae2;
+    }
+
+    .input-box {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border-top: 1px solid #ccc;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      outline: none;
+    }
+
+    input[type="file"] {
+      width: 80px;
+    }
+
+    button {
+      padding: 8px;
+      border: none;
+      background: #25d366;
+      color: white;
+      cursor: pointer;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 8px 10px;
+      margin: 5px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .right {
+      align-self: flex-end;
+      background: #dcf8c6;
+    }
+
+    .left {
+      align-self: flex-start;
+      background: #fff;
+    }
+
+    .username {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .time {
+      font-size: 10px;
+      color: gray;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- 🔐 LOGIN -->
+<div id="loginBox" style="text-align:center; margin-top:100px;">
+  <h2>Enter Password</h2>
+  <input type="password" id="passwordInput" placeholder="Password">
+  <button onclick="checkPassword()">Login</button>
+</div>
+
+<!-- 💬 CHAT (HIDDEN FIRST) -->
+<div id="chatApp" style="display:none;">
+  <div class="chat-box">
+    <div class="messages" id="messages"></div>
+    <div id="typing" style="font-size:12px; color:gray; margin-left:10px;"></div>
+
+    <div class="input-box">
+      <input type="text" id="msgInput" placeholder="Type message..."
+      onkeypress="handleKey(event)"
+      oninput="userTyping()">
+
+      <input type="file" id="imgInput">
+
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  let username = localStorage.getItem("username");
+
+  if (!username) {
+    username = prompt("Enter your name");
+    localStorage.setItem("username", username);
+  }
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBSzLon0FN7Yh36hxZNMPWKIvnnWF7JQ5M",
+    authDomain: "chat-app-7447f.firebaseapp.com",
+    databaseURL: "https://chat-app-7447f-default-rtdb.firebaseio.com",
+    projectId: "chat-app-7447f",
+    storageBucket: "chat-app-7447f.appspot.com",
+    messagingSenderId: "649241787917",
+    appId: "1:649241787917:web:87bdba762ff4290f581f44"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // 🔐 PASSWORD CHECK
+  function checkPassword() {
+    let pass = document.getElementById("passwordInput").value;
+
+    if (pass === "Vikas@123") {
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("chatApp").style.display = "block";
+    } else {
+      alert("Wrong Password ❌");
+    }
+  }
+
+  // SEND MESSAGE / IMAGE
+  function sendMessage() {
+    let input = document.getElementById("msgInput");
+    let fileInput = document.getElementById("imgInput");
+
+    let message = input.value;
+    let file = fileInput.files[0];
+
+    if (file) {
+      let reader = new FileReader();
+
+      reader.onload = function(e) {
+        db.ref("messages").push({
+          image: e.target.result,
+          user: username,
+          time: Date.now()
+        });
+      };
+
+      reader.readAsDataURL(file);
+      fileInput.value = "";
+      return;
+    }
+
+    if (message.trim() === "") return;
+
+    db.ref("messages").push({
+      text: message,
+      user: username,
+      time: Date.now()
+    });
+
+    input.value = "";
+  }
+
+  function handleKey(event) {
+    if (event.key === "Enter") {
+      sendMessage();
+    }
+  }
+
+  // REALTIME
+  db.ref("messages").on("child_added", function(snapshot) {
+    let data = snapshot.val();
+
+    let msgDiv = document.createElement("div");
+    msgDiv.classList.add("msg");
+
+    let userSpan = document.createElement("div");
+    userSpan.classList.add("username");
+    userSpan.textContent = data.user;
+
+    msgDiv.appendChild(userSpan);
+
+    if (data.image) {
+      let img = document.createElement("img");
+      img.src = data.image;
+      img.style.maxWidth = "100%";
+      img.style.borderRadius = "10px";
+      msgDiv.appendChild(img);
+    } else {
+      let textSpan = document.createElement("div");
+      textSpan.textContent = data.text;
+      msgDiv.appendChild(textSpan);
+    }
+
+    let timeSpan = document.createElement("div");
+    timeSpan.classList.add("time");
+
+    let time = new Date(data.time).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    timeSpan.textContent = time;
+    msgDiv.appendChild(timeSpan);
+
+    if (data.user === username) {
+      msgDiv.classList.add("right");
+    } else {
+      msgDiv.classList.add("left");
+    }
+
+    document.getElementById("messages").appendChild(msgDiv);
+
+    let messages = document.getElementById("messages");
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  function userTyping() {
+    db.ref("typing/" + username).set(true);
+
+    setTimeout(() => {
+      db.ref("typing/" + username).remove();
+    }, 2000);
+  }
+
+  db.ref("typing").on("value", function(snapshot) {
+    let typingDiv = document.getElementById("typing");
+    typingDiv.innerHTML = "";
+
+    snapshot.forEach(function(child) {
+      let user = child.key;
+
+      if (user !== username) {
+        typingDiv.innerHTML = user + " is typing...";
+      }
+    });
+  });
+
+  function deleteOldMessages() {
+    let now = Date.now();
+
+    db.ref("messages").once("value", function(snapshot) {
+      snapshot.forEach(function(child) {
+        let data = child.val();
+
+        if (data.time && (now - data.time > 12 * 60 * 60 * 1000)) {
+          db.ref("messages/" + child.key).remove();
+        }
+      });
+    });
+  }
+
+  deleteOldMessages();
+</script>
+
+<script src="extra.js"></script>
+
+</body>
+</html>@
